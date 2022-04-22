@@ -1,3 +1,3 @@
 
 def custom_test():
-    print("hello")
+    print("hello in tester.")
