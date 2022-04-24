@@ -1,6 +1,6 @@
 # Git 뜯어보기
 ## 목표
-- git 뜯어보기 ~4/25 [Git 뜯어보기](https://www.notion.so/Git-bced185e3ff24020b3e643598d6a21a5)
+- git 뜯어보기
     - .git에 정보가 어떻게 저장되나
     - 파일 크기에 따라서 어떻게 전송/수신하나
     - github같은 곳은 git 정보를 어디에 저장하나
