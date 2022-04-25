@@ -1,4 +1,4 @@
-## github는 git 정보를 어디에 저장하나
+## github같은 곳은 git 정보를 어디에 저장하나
 - git: 로컬에서 버전 관리
 - github:  git 저장소를 관리하는 클라우드 기반 호스팅 서비스
 - 그렇다면 github는 로컬의 .git 폴더 정보를 어떻게, 어디에 저장하는가?
@@ -67,12 +67,13 @@ https://www.pankajtanwar.in/blog/how-does-github-store-millions-of-repo-and-bill
 - 모든 tree object들의 DB 인덱싱은 SHA-1 해시로 되어있음. SHA1이면 160bit아닌가 엄청크네
 - Spoke는 3개의 다른 서버에 깃헙 레포를 3개 카피해서 저장함. 
 - 서버 2개가 다운되어도 작동할 수 있도록 한다. 
-- For each push to a Git repo, it goes through a proxy which is responsible for replicating the change. 
+- For each push to a Git repo, it goes through a proxy which is responsible for replicating the change.  
 ![](https://i.imgur.com/pTFrPMf.png)
 
 ### How to Build a GitHub
 https://zachholman.com/talk/how-to-build-a-github/
-
+- 깃허브 초창기 개발자의 글
+- github의 정보 저장: objects와 같은 .git폴더의 구조를 따라서 저장함. 이 방법이 2~100배의 성능을 이끌었다. 
 ---
 결국 어떻게 저장한다는 것일까?
 Spoke를 좀더 알아보자
@@ -91,17 +92,23 @@ https://github.blog/2016-04-05-introducing-dgit/
 
 
 #### 결국 어떻게 저장하는지
-- 각 리포지토리는 3개의 서버에 저장된다. 이 서버들은 independently하게 분산되어있다, 그들의 커다란 파일 서버 풀에서. DGit은 서버중에서 각 레포지토리를 담당할 서버를 자동으로 선택하고 3개의 복제본을 sync로 관리한다. read 요청이 들어오면 다루기 가장 좋은 서버를 선택하여 응답한다. write 요청이 들어오면 모든 3개 복제본에 synchronously streamed하고 2개 이상의 복제본이 성공했을 때 커밋한다. 
+- 각 리포지토리는 3개의 서버에 저장된다. 이 서버들은 independently하게 분산되어있다, 그들의 커다란 파일 서버 풀에서. DGit은 서버중에서 각 레포지토리를 담당할 서버를 자동으로 선택하고 3개의 복제본을 sync로 관리한다. read 요청이 들어오면 다루기 가장 좋은 서버를 선택하여 응답한다. write 요청이 들어오면 모든 3개 복제본에 synchronously streamed하고 2개 이상의 복제본이 성공했을 때 커밋한다.  
 ![](https://i.imgur.com/AoQaatO.png)
 - 깃허브는 현재 레포지토리를 github-dfs—dfs라고 불리는 클러스터에 저장한다. 이 클러스터는 “DGit file server.”라고도 불린다. 
 - 리포지토리는 이들 파일 서버의 로컬 디스크에 저장되고, git이랑 libgit2에 의해 serve된다. 이 클러스터들의 클라이언트는 프론트엔드나 프록시등이고, 유저의 깃 클라이언트에 speak한다. (번역이 이상한데 원글은 The clients of this cluster include the web front end and the proxies that speak to users’ Git clients.)
-- 파일 서버의 로컬 SSD에 저장된다는 얘기이다. 
+- 속도를 위해 파일 서버의 로컬 SSD에 저장됨  
 ![](https://i.imgur.com/tbzEK02.png)
-- DGit 방식을 쓰고 CPU 사용량이 현저히 감소함
+- DGit 방식을 쓰고 CPU 사용량이 현저히 감소함  
 ![](https://i.imgur.com/RcKT4c4.png)
-
 
 
 ### Stretching Spokes
 https://github.blog/2017-10-13-stretching-spokes/
 - 주제: how we got Spokes replication to span widely separated datacenters. 
+- 매우 구체적인 내용이다. 예를 들면 파일 서버를 멀리 있는 것 3개로 해야 허리케인에 의해 셋다 날아가지 않는다는... 우리는 고려하지 않아도 될 것 같다.
+
+
+---
+### 정리
+- 그래서 결국 어떻게 저장하는가? .git 폴더를 그냥 저장하는건가 -> 이거에 대한 내용이 없는데, 확실한 것은 objects와 같은 .git폴더의 구조를 따라서 저장함.
+- github같은 곳은 git 정보를 어디에 저장하나 -> 깃허브 클러스터 파일 서버의 SSD에 저장한다. 한 레포지토리는 세 군데에 저장되어있음. 
