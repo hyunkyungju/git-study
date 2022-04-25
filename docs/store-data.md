@@ -1,4 +1,4 @@
-## github같은 곳은 git 정보를 어디에 저장하나
+## github는 git 정보를 어디에 저장하나
 - git: 로컬에서 버전 관리
 - github:  git 저장소를 관리하는 클라우드 기반 호스팅 서비스
 - 그렇다면 github는 로컬의 .git 폴더 정보를 어떻게, 어디에 저장하는가?
@@ -10,6 +10,7 @@ https://stackoverflow.com/questions/30451559/how-the-github-store-your-repositor
 - repository가 .git 폴더를 의미하는 것인듯. 
 - 깃허브는 원래 Grit이라는 루비 라이브러리를 사용했음. 지금은 rugged를 사용함.
 - There are Git reimplementations in other languages like JGit for Java 
+    - https://git-scm.com/book/ko/v2/%EB%B6%80%EB%A1%9D-B%3A-%EC%95%A0%ED%94%8C%EB%A6%AC%EC%BC%80%EC%9D%B4%EC%85%98%EC%97%90-Git-%EB%84%A3%EA%B8%B0-JGit
 - If you wanted to store Git repositories(.git 폴더), what you'd want to do is store them on a filesystem (or a cluster thereof) and then have a pointer in your database to point to where the filesystem is located, then use a library like Rugged or JGit or Dulwich to read stuff from the Git repository.
 - .git 폴더를 서버의 파일시스템에 저장하라는 뜻인듯. 
 - pointer를 db에 가지라는 것이 무슨 말인지 잘 이해가 안감
@@ -30,14 +31,13 @@ https://www.pankajtanwar.in/blog/how-does-github-store-millions-of-repo-and-bill
 - Github 레포 URL을 브라우저에 치면, 무슨 일이 일어난 후에 repo 페이지가 보일까 
 
 ##### Here is the quick flow 
-- https://github.com/github/docs url 넣음
+- ex. https://github.com/github/docs url 넣음
 - 프론트 서버 중 하나가 request 받음 ( typically 8 Core CPU, 16 GB RAM Bare Metal Server)
 - 프론트 서버의 Nginx가 (reverse proxy server) 요청을 보냄 to Unix Domain Socket (16 Unicorn worker processes are running on it) 
 - 워커 한명이 백엔드로 요청 보냄 (Running on Ruby on Rails) 백엔드는 MySQL, 캐시랑 연결되어있음. 
 - 캐시 미스 발생 시 **Grit library**를 이용해서 데이터 가져옴(이게 rugged로 바뀐거 아녔음?)
 - Grit makes RPC call (Remote procedure call) to **Smoke** Service (filesystem에 direct하게 접근& mapped to frontend machines)
     - 운영체제를 공부하다 보면 프로세스간 통신을 위해 IPC(inter-Process Communication)을 이용하는 내용을 볼 수 있는데요, RPC는 IPC 방법의 한 종류로 원격지의 프로세스에 접근하여 프로시저 또는 함수를 호출하여 사용하는 방법을 말합니다.
-    - Smoke Service를 검색하면 담배 게시글 밖에없다. 자료가 잘 없는 듯 
 - 프론트 서버는 4개의 프록시 서버 인스턴스를 돌린다. 
 - 프록시 서버가 request에서 repo의 유저 이름을 알아냄 
 - **Chimney** (A library which gives route to Smoke service) talks to Redis for route and gives back to Smoke
@@ -46,13 +46,13 @@ https://www.pankajtanwar.in/blog/how-does-github-store-millions-of-repo-and-bill
 - It sends back response to client via Nginx (not through load balancer)
 - Slave file servers keeps memcache server.
 - IMPORTANT - Github uses Rackspace instead of Amazon EC2 as Amazon Elastic Block Store was not nearly as fast as bare metal when they ran benchmarks for handling high disk IO operations.
-- 뒤로 갈수록 어렵다..  
+- 뒤로 갈수록 어렵다.. 
 
 
 #### New Github Storage
 - shared file system -> federated(연합) storage 
 - federated storeage: a collection of autonomous(자율적인) storage resources which are being monitored by a common management system that provides rules, how data is stored, managed and migrated throughout the storage network. 중간에 common management system이 전체적으로 관리하고, 자율적인 스토리지가 여러개 있다는 뜻. 
-- In the new system, they could add as many additional machines (Linux machines running ext3/ext4) they wanted, without hitting the performance. 병렬처리로 성능을 끌어올릴 수 있었다는 뜻인 것 같은데 이유가 뭐지?
+- In the new system, they could add as many additional machines (Linux machines running ext3/ext4) they wanted, without hitting the performance. 병렬처리로 성능을 끌어올릴 수 있었다는 뜻인 것 같은데 이유가 뭘까? 
 
 #### Spokes
 - 목적: to store multiple distributed copies of a github repo across data centres.
@@ -69,5 +69,39 @@ https://www.pankajtanwar.in/blog/how-does-github-store-millions-of-repo-and-bill
 - 서버 2개가 다운되어도 작동할 수 있도록 한다. 
 - For each push to a Git repo, it goes through a proxy which is responsible for replicating the change. 
 ![](https://i.imgur.com/pTFrPMf.png)
-- Github Spokes’s design, with optimization of the performance of distributed reference updates, now allows Spokes to replicate Git repositories effectively. This improves robustness, speed, and flexibility. 최적화 했다는 문장인듯! 
 
+### How to Build a GitHub
+https://zachholman.com/talk/how-to-build-a-github/
+
+---
+결국 어떻게 저장한다는 것일까?
+Spoke를 좀더 알아보자
+
+### Introducing DGit
+(DGit가 지금은 Spokes로 불린다.)
+https://github.blog/2016-04-05-introducing-dgit/
+- 깃헙 블로그에 있는 글인데 설명이 친절하다. 반복해서 읽을수록 더 많이 이해되는 글. 
+- DGit: distributed storage system that dramatically improves the availability, reliability, and performance of serving and storing Git content.
+- 한 레포지토리당 3개 카피를 서로 다른 3개 서버에 저장해둠. 
+- DGit performs replication at the application layer, rather than at the disk layer. 
+- 한 서버가 꺼져야하면 다른 서버에 내용을 저장해둠. 
+- Git is very sensitive to latency. A simple '''git log''' or '''git blame''' might require thousands of Git objects to be loaded and traversed sequentially. 오호... 깃허브에서 속도가 중요한 이유가 뭔지 궁금했는데 이게 이유인듯
+- storing the repository in a distributed file system is not viable. -> 근데 지금 분산처리한댓지않음!?! 더 읽어보자 
+- Git is optimized to be fast when accessing fast disks, so the DGit file servers store repositories on fast, local SSDs. 
+
+
+#### 결국 어떻게 저장하는지
+- 각 리포지토리는 3개의 서버에 저장된다. 이 서버들은 independently하게 분산되어있다, 그들의 커다란 파일 서버 풀에서. DGit은 서버중에서 각 레포지토리를 담당할 서버를 자동으로 선택하고 3개의 복제본을 sync로 관리한다. read 요청이 들어오면 다루기 가장 좋은 서버를 선택하여 응답한다. write 요청이 들어오면 모든 3개 복제본에 synchronously streamed하고 2개 이상의 복제본이 성공했을 때 커밋한다. 
+![](https://i.imgur.com/AoQaatO.png)
+- 깃허브는 현재 레포지토리를 github-dfs—dfs라고 불리는 클러스터에 저장한다. 이 클러스터는 “DGit file server.”라고도 불린다. 
+- 리포지토리는 이들 파일 서버의 로컬 디스크에 저장되고, git이랑 libgit2에 의해 serve된다. 이 클러스터들의 클라이언트는 프론트엔드나 프록시등이고, 유저의 깃 클라이언트에 speak한다. (번역이 이상한데 원글은 The clients of this cluster include the web front end and the proxies that speak to users’ Git clients.)
+- 파일 서버의 로컬 SSD에 저장된다는 얘기이다. 
+![](https://i.imgur.com/tbzEK02.png)
+- DGit 방식을 쓰고 CPU 사용량이 현저히 감소함
+![](https://i.imgur.com/RcKT4c4.png)
+
+
+
+### Stretching Spokes
+https://github.blog/2017-10-13-stretching-spokes/
+- 주제: how we got Spokes replication to span widely separated datacenters. 
